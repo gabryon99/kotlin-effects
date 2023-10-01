@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="EffectsTesting" tests="9" skipped="0" failures="0" errors="0" timestamp="2023-10-01T16:19:04" hostname="DE-UNIT-1235" time="0.079">
+  <properties/>
+  <testcase name="Nested Effect Handlers()[jvm]" classname="EffectsTesting" time="0.037"/>
+  <testcase name="MPretnar - Simple Read Effect()[jvm]" classname="EffectsTesting" time="0.002"/>
+  <testcase name="MPretnar - Reverse output()[jvm]" classname="EffectsTesting" time="0.002"/>
+  <testcase name="The Next effect()[jvm]" classname="EffectsTesting" time="0.003"/>
+  <testcase name="State Effect - Print emails()[jvm]" classname="EffectsTesting" time="0.005"/>
+  <testcase name="MPretnar - Collecting Output()[jvm]" classname="EffectsTesting" time="0.006"/>
+  <testcase name="No effects()[jvm]" classname="EffectsTesting" time="0.003"/>
+  <testcase name="Simple Effect()[jvm]" classname="EffectsTesting" time="0.001"/>
+  <testcase name="Abort effectful function()[jvm]" classname="EffectsTesting" time="0.001"/>
+  <system-out><![CDATA[]]>&#x1f1ee;<![CDATA[]]>&#x1f1f9;<![CDATA[
+Read firstname: Bob
+Read lastname: Bob
+Full Name: Bob Bob
+C
+B
+A
+42
+Bob's email: bob@tum.de
+Alex's email: alex.12@tum.de
+Sofia's email: sofy.best@tum.de
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
