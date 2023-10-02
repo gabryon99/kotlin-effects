@@ -1,5 +1,3 @@
-package kotlin
-
 import effects.*
 import org.junit.jupiter.api.Test
 

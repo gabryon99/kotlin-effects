@@ -2,7 +2,11 @@ package effects
 
 import kotlin.coroutines.Continuation
 
+class UnhandledEffectException: Exception()
+
 interface EffectHandler<R : Any?> : Continuation<R> {
+
+    fun <T> unhandled(): T = throw UnhandledEffectException()
 
     fun <T> invokeHandler(effect: Effect<T>)
 

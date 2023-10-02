@@ -184,6 +184,7 @@ class EffectfulScope<R> private constructor(
                             result = unwrapResult().getOrThrow()
                         }
                     }
+                    return unwrapResult().getOrThrow()
                 }
             }
         }
