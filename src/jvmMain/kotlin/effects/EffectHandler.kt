@@ -2,14 +2,11 @@ package effects
 
 import kotlin.coroutines.Continuation
 
-class UnhandledEffectException: Exception()
+class UnhandledEffectException: RuntimeException()
 
-interface EffectHandler<R : Any?> : Continuation<R> {
+interface EffectHandlerScope<R> : Continuation<R> {
 
     fun <T> unhandled(): T = throw UnhandledEffectException()
-
-    fun <T> invokeHandler(effect: Effect<T>)
-
 
     /**
      * Resume the execution of an effectful function
@@ -30,5 +27,11 @@ interface EffectHandler<R : Any?> : Continuation<R> {
     suspend fun <T> resume(input: T): R
 }
 
-suspend fun <R> EffectHandler<R>.resume(): R = resume(Unit)
+suspend fun <R> EffectHandlerScope<R>.resume(): R = resume(Unit)
 
+interface EffectHandler<R> : EffectHandlerScope<R> {
+    /**
+     * Invoke the effect handler passing the effect as parameter.
+     */
+    fun <T> invokeHandler(effect: Effect<T>)
+}

@@ -1,5 +1,6 @@
 import effects.*
 import org.junit.jupiter.api.Test
+import kotlin.RuntimeException
 
 object Next : Effect<String>
 
@@ -7,14 +8,49 @@ object Read : Effect<String>
 
 object Fail : Effect<Unit>
 
-class Print(val msg: String) : Effect<Unit>
+data class Print(val msg: String) : Effect<Unit>
 
 sealed class State<R> : Effect<R> {
     internal data class Set(val key: String, val value: String): State<Unit>()
     internal data class Get(val key: String): State<String>()
 }
 
+object Empty: Effect<Unit>
+
 class EffectsTesting {
+
+    @Test
+    fun `Performing a lot`() {
+        // 100 - 27ms/27ms/27ms =avg 27ms
+        // 1_000 - 72ms/62ms/72ms =avg 68,6ms
+        // 10_000 - 205ms/205ms/196ms =avg 202ms
+        // 100_000 - 1962ms/1938ms/1951ms =avg 1950ms
+        handle {
+            for (i in (0..1_000_000)) {
+                perform(Empty)
+            }
+        } with {
+            resume(Unit)
+        }
+    }
+
+    @Test
+    fun `Random Test`() {
+        val x = handle {
+            perform(Empty) // EH0
+            perform(Empty) // EH1
+            perform(Empty) // EH2
+            0
+        } with { effect ->
+            when (effect) {
+                is Empty -> {
+                    resume() + 1
+                }
+                else -> unhandled()
+            }
+        }
+        assert(x == 3)
+    }
 
     @Test
     fun `Nested Effect Handlers`() {
@@ -40,7 +76,7 @@ class EffectsTesting {
 
     @Test
     fun `No effects`() {
-
+        // 27ms,27ms,18ms
         val answer = handle {
             42
         } with {
@@ -52,7 +88,7 @@ class EffectsTesting {
 
     @Test
     fun `Simple Effect`() {
-
+        // 27ms,27ms,18ms
         val result = handle {
             val prefix = perform { Read }
             "$prefix: hello world!"
@@ -69,6 +105,7 @@ class EffectsTesting {
 
     @Test
     fun `Abort effectful function`() {
+        // 36ms,27ms,
         val result = handle {
             perform(Fail)
             0
@@ -85,9 +122,7 @@ class EffectsTesting {
     fun `MPretnar - Simple Read Effect`() {
         handle {
             val firstName = perform(Read)
-            println("kotlin.Read firstname: $firstName")
             val lastname = perform(Read)
-            println("kotlin.Read lastname: $lastname")
             println("Full Name: $firstName $lastname")
         } with { effect ->
             when (effect) {
@@ -102,7 +137,11 @@ class EffectsTesting {
     @Test
     fun `MPretnar - Reverse output`() {
 
-        val reverseHandler: EffectHandlerFunction<Unit> = {
+        handle {
+            perform { Print("A") }
+            perform { Print("B") }
+            perform { Print("C") }
+        } with {
             when (it) {
                 is Print -> {
                     resume()
@@ -110,12 +149,6 @@ class EffectsTesting {
                 }
                 else -> unhandled()
             }
-        }
-
-        handleWith(reverseHandler) {
-            perform { Print("A") }
-            perform { Print("B") }
-            perform { Print("C") }
         }
 
     }
@@ -140,7 +173,39 @@ class EffectsTesting {
     }
 
     @Test
-    fun `MPretnar - Collecting Output`() {
+    fun `MPretnar - Collecting Output (Original)`() {
+
+        val pair = handle {
+            handle {
+                perform { Print("A") }
+                perform { Print("B") }
+                perform { Print("C") }
+            } with {
+                when (it) {
+                    is Print -> {
+                        resume()
+                        println(it)
+                        unhandled()
+                    }
+                    else -> unhandled()
+                }
+            }
+            Pair(Unit, "")
+        } with {
+            when (it) {
+                is Print -> {
+                    println(it)
+                    val (x, acc) = resume(Unit)
+                    Pair(x, "${it.msg}$acc")
+                }
+                else -> unhandled()
+            }
+        }
+        println(pair)
+    }
+
+    @Test
+    fun `MPretnar - Collecting Output (Tweaked)`() {
 
         val result = handle {
 
@@ -186,6 +251,21 @@ class EffectsTesting {
                 }
                 else -> unhandled()
             }
+        }
+    }
+
+    @Test
+    fun `Throwing an exception`() {
+        handle {
+            try {
+                println(perform(Empty))
+            } catch (e: IllegalStateException) {
+                println("Do nothing!")
+            } finally {
+                println("This will not be printed!")
+            }
+        } with {
+            resume(throw RuntimeException())
         }
     }
 

@@ -6,10 +6,10 @@ import kotlin.coroutines.*
 
 private const val DEFAULT_FORWARD_INDEX = -1
 
-class EffectfulScope<R> private constructor(
+class EffectfulScopeImpl<R> private constructor(
     private val effectfulFunction: EffectfulFunction<R>,
     private val effectHandlerFunction: EffectHandlerFunction<R>
-) : Continuation<R> {
+) : EffectfulScope<R> {
 
     data class Builder<R>(
         var effectfulFunction: EffectfulFunction<R>? = null,
@@ -23,7 +23,7 @@ class EffectfulScope<R> private constructor(
             this.effectHandlerFunction = effectHandlerFunction
         }
 
-        fun build() = EffectfulScope(effectfulFunction!!, effectHandlerFunction!!)
+        fun build() = EffectfulScopeImpl(effectfulFunction!!, effectHandlerFunction!!)
     }
 
     enum class EffectfulFunctionStatus {
@@ -35,7 +35,7 @@ class EffectfulScope<R> private constructor(
     }
 
     companion object {
-        val EFFECTFUL_SCOPES: MutableList<EffectfulScope<*>> = mutableListOf()
+        val EFFECTFUL_SCOPES: MutableList<EffectfulScopeImpl<*>> = mutableListOf()
 
         private val _currentID = AtomicInteger(0)
         fun generateNewID(): Int = _currentID.getAndIncrement()
@@ -66,7 +66,7 @@ class EffectfulScope<R> private constructor(
 
     private var forwardIndex: Int = DEFAULT_FORWARD_INDEX
 
-    suspend fun <T> perform(effect: Effect<T>): T {
+    override suspend fun <T> perform(effect: Effect<T>): T {
         effectfulFunctionStatus = EffectfulFunctionStatus.PERFORMED_EFFECT
         effectToBeHandled = effect
         return suspendCoroutine {
@@ -74,12 +74,6 @@ class EffectfulScope<R> private constructor(
             effectfulFunctionContinuation = it as Continuation<Any?>
         }
     }
-
-    /**
-     * Alternative function to perform an effect within a lambda.
-     */
-    suspend inline fun <T> perform(effect: () -> Effect<T>): T = perform(effect())
-
 
     private fun invokeEffectHandler(effectHandlerFunction: EffectHandlerFunction<R>) {
 
@@ -184,7 +178,7 @@ class EffectfulScope<R> private constructor(
                             result = unwrapResult().getOrThrow()
                         }
                     }
-                    return unwrapResult().getOrThrow()
+                    return result
                 }
             }
         }

@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.*
 
 class EffectHandlerImpl<R>(
-    private val effectfulScope: EffectfulScope<R>,
+    private val effectfulScopeImpl: EffectfulScopeImpl<R>,
     private val effectfulFunContinuation: Continuation<Any?>,
     private val effectHandlerFunction: EffectHandlerFunction<R>,
 ) : EffectHandler<R> {
@@ -51,7 +51,7 @@ class EffectHandlerImpl<R>(
 
         // Resume the effectful function computation
         // where it was stopped.
-        effectfulScope.resetForwardIndex()
+        effectfulScopeImpl.resetForwardIndex()
         effectfulFunContinuation.resume(input)
 
         // What is the current state of the effectful function associated with the handler?
@@ -59,14 +59,14 @@ class EffectHandlerImpl<R>(
         // to be fetched. Otherwise, if an effect has been performed, we have to suspend
         // the current effect handler and wait for the whole effect runtime.
 
-        val returnedValue = when (effectfulScope.effectfulFunctionStatus) {
-            EffectfulScope.EffectfulFunctionStatus.PERFORMED_EFFECT -> {
+        val returnedValue = when (effectfulScopeImpl.effectfulFunctionStatus) {
+            EffectfulScopeImpl.EffectfulFunctionStatus.PERFORMED_EFFECT -> {
                 suspendCoroutine {
                     status = EffectHandlerStatus.SUSPENDED
                     handlerContinuation = it
                 }
             }
-            EffectfulScope.EffectfulFunctionStatus.COMPUTED -> effectfulScope.unwrapResult().getOrThrow()
+            EffectfulScopeImpl.EffectfulFunctionStatus.COMPUTED -> effectfulScopeImpl.unwrapResult().getOrThrow()
             else -> TODO("Unreachable")
         }
 
@@ -80,13 +80,15 @@ class EffectHandlerImpl<R>(
         return returnedValue
     }
 
+
     /**
      * Continue the execution of an effect handler where it was suspended.
      */
     fun continueEffectHandlerExecution(value: R) {
         assert(status == EffectHandlerStatus.SUSPENDED)
-        assert(handlerContinuation != null)
-        handlerContinuation!!.resume(value)
+        when {
+            handlerContinuation != null -> handlerContinuation!!.resume(value)
+        }
     }
 
     override fun resumeWith(result: Result<R>) {
@@ -97,21 +99,22 @@ class EffectHandlerImpl<R>(
 
             when (status) {
                 EffectHandlerStatus.RESUMED -> {
-                    effectfulScope.unregisterEffectHandler(this, result)
+                    effectfulScopeImpl.unregisterEffectHandler(this, result)
                 }
                 EffectHandlerStatus.HANDLING -> {
-                    effectfulScope.abortComputation(result)
+                    effectfulScopeImpl.abortComputation(result)
                 }
                 else -> TODO("Unreachable")
             }
 
             status = EffectHandlerStatus.DONE
+
         }.onFailure {
 
             if (it is UnhandledEffectException) {
                 // We should invoke the top effect handler...
-                effectfulScope.unregisterEffectHandler(this)
-                effectfulScope.forwardToParent()
+                effectfulScopeImpl.unregisterEffectHandler(this)
+                effectfulScopeImpl.forwardToParent()
             }
 
         }
